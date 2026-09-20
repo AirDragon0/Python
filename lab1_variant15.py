@@ -93,35 +93,52 @@ class ImageApp:
 
         filename = filedialog.asksaveasfilename(
             title="Сохранить изображение",
-            defaultextension=".png",
+            defaultextension=".pbm",
             filetypes=[
-                ("PNG", "*.png"),
-                ("GIF", "*.gif"),
-                ("PPM", "*.ppm")
+                ("PBM", "*.pbm")
             ]
         )
-
         if not filename:
             return
 
-        suffix = Path(filename).suffix.lower()
-
-        if suffix == ".gif":
-            image_format = "gif"
-        elif suffix == ".ppm":
-            image_format = "ppm"
-        else:
-            if suffix != ".png":
-                filename += ".png"
-            image_format = "png"
+        width = self.image.width()
+        height = self.image.height()
 
         try:
-            self.image.write(filename, format=image_format)
+            with open(filename, "w", encoding="ascii") as file:
+                file.write("P1\n")
+                file.write(f"{width} {height}\n")
+
+                for y in range(height):
+                    row = []
+
+                    for x in range(width):
+                        pixel = self.image.get(x, y)
+
+                        if isinstance(pixel, tuple):
+                            r, g, b = pixel[:3]
+                        else:
+                            r, g, b = map(int, str(pixel).split())
+
+                        brightness = (
+                            0.299 * r +
+                            0.587 * g +
+                            0.114 * b
+                        )
+
+                        if brightness < 128:
+                            row.append("1")
+                        else:
+                            row.append("0")
+
+                    file.write(" ".join(row) + "\n")
+
             messagebox.showinfo(
                 "Готово",
-                "Изображение успешно сохранено."
+                "Изображение успешно сохранено в формате PBM."
             )
-        except tk.TclError as error:
+
+        except (OSError, ValueError, tk.TclError) as error:
             messagebox.showerror(
                 "Ошибка сохранения",
                 str(error)
